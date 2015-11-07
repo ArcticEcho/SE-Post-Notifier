@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SE Active Post Notifier
-// @namespace    https://github.com/ArcticEcho/SE-Post-Notifier
-// @version      0.1
+// @namespace    GH link
+// @version      0.2.0
 // @description  Adds inbox notifications for posts that you've CVd/DVd and later become active.
 // @author       Sam
 // @include      /^https?:\/\/(meta.)?stack(overflow|exchange).com/.*$/
@@ -19,6 +19,12 @@ var _dvPostInboxItemSummary = "A post you've downvoted has been edited.";
 var _cvPostInboxItemSummary = "A post you've voted to close has been edited.";
 var _manPostInboxItemSummary = "A manually added post has been edited.";
 
+var _dvPs = localStorage.getItem("DVPostsQueue");
+var _cvPs = localStorage.getItem("CVPostsQueue");
+var _manPs = localStorage.getItem("ManPostsQueue");
+
+var _watching = [ "" ];
+
 
 
 var checkExist = setInterval(function()
@@ -29,34 +35,59 @@ var checkExist = setInterval(function()
     {
         addDVListeners();
         fillInbox();
+        watchOldPosts();
         clearInterval(checkExist);
     }
 }, 250);
 
-var dvPs = localStorage.getItem("DVPostsQueue");
-var cvPs = localStorage.getItem("CVPostsQueue");
-var manPs = localStorage.getItem("ManPostsQueue");
-
 var watchStorage = setInterval(function()
 {
-    if (dvPs !== localStorage.getItem("DVPostsQueue"))
+    var newDvPs = localStorage.getItem("DVPostsQueue");
+    if (_dvPs !== newDvPs)
     {
-        var oldIDs = dvPs.split(";");
-        var newIDs = localStorage.getItem("DVPostsQueue").split(";");
+        var oldIDs = (_dvPs === null ? "" : _dvPs).split(";");
+        var newIDs = (newDvPs === null ? "" : newDvPs).split(";");
         
         for (var i = 0; i < newIDs.length; i++)
         {
             if (oldIDs.indexOf(newIDs[i]) === -1)
             {
                 watchPost(newIDs[i], "dv");
-                dvPs.push(newIDs[i]);
+                _dvPs += newIDs[i] + ";";
             }
         }
     }
 }, 500);
 
+function watchOldPosts()
+{
+    var dvUrls = (_dvPs === null ? "" : _dvPs).split(";");
+    var cvUrls = (_cvPs === null ? "" : _cvPs).split(";");
+    var manUrls = (_manPs === null ? "" : _manPs).split(";");
+    
+    for (var i = 0; i < dvUrls.length; i++)
+        if (dvUrls[i].length > 0)
+            watchPost(dvUrls[i], "dv");
+    
+    for (var i = 0; i < cvUrls.length; i++)
+        if (cvUrls[i].length > 0)
+            watchPost(cvUrls[i], "cv");
+    
+    for (var i = 0; i < manUrls.length; i++)
+        if (manUrls[i].length > 0)
+            watchPost(manUrls[i], "manual");
+}
+
 function watchPost(url, reason)
 {
+    console.log("Request to watch post: " + url);
+    
+    if (_watching.indexOf(url) !== -1 || url === undefined || url.length === 0) { console.log("Rejected.\n\n"); return; }
+    
+    console.log("Accepted.\n\n");
+    
+    _watching.push(url);
+    
     var ws = new WebSocket("ws://qa.sockets.stackexchange.com");
     ws.onmessage = function(e)
     {
@@ -115,14 +146,17 @@ function removePost(key, post)
 {
     var otherPosts = localStorage.getItem(key);
     
-    if (otherPosts === null) return;
+    if (otherPosts === undefined) return;
     
-    localStorage.setItem(key, otherPosts.replace(post, ""));
+    localStorage.setItem(key, otherPosts.replace(post + ";", ""));
 }
                          
 function savePost(key, post)
 {
     var otherPosts = localStorage.getItem(key);
+    
+    if (otherPosts !== undefined && otherPosts.indexOf(post) !== -1) return;
+    
     localStorage.setItem(key, (otherPosts === null ? "" : otherPosts) + post + ";");
 }
 
