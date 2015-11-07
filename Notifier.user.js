@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         SE Active Post Notifier
 // @namespace    https://github.com/ArcticEcho/SE-Post-Notifier
-// @version      0.2.1
+// @version      0.2.2
 // @description  Adds inbox notifications for posts that you've CVd/DVd and later become active.
 // @author       Sam
-// @include      /^https?:\/\/(meta.)?stack(overflow|exchange).com/.*$/
+// @include      /^https?:\/\/stack(overflow|exchange).com/
 // ==/UserScript==
 
 // localStorage usage.
@@ -91,7 +91,15 @@ function watchPost(url, reason)
     var ws = new WebSocket("ws://qa.sockets.stackexchange.com");
     ws.onmessage = function(e)
     {
-        if (JSON.parse(JSON.parse(e.data).data).a == "post-edit")
+        var a = "";
+        
+        try
+        {
+            a = JSON.parse(JSON.parse(e.data).data).a;
+        }
+        catch (ex) { }
+        
+        if (a == "post-edit")
         {
             var postHtml = httpGet(url);
             var title = $(".question-hyperlink", $(postHtml)).first().text();
@@ -142,7 +150,7 @@ function addDVListeners()
     if (post === null) return;
     $(".vote-down-off").first().on("click", function() { watchPost(post[0], "dv"); });
 }
-
+                         
 function removePost(key, post)
 {
     var otherPosts = localStorage.getItem(key);
@@ -151,7 +159,7 @@ function removePost(key, post)
     
     localStorage.setItem(key, otherPosts.replace(post + ";", ""));
 }
-
+                         
 function savePost(key, post)
 {
     var otherPosts = localStorage.getItem(key);
