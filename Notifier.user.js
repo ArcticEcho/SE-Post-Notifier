@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SE Active Post Notifier
-// @namespace    GH link
-// @version      0.2.0
+// @namespace    https://github.com/ArcticEcho/SE-Post-Notifier
+// @version      0.2.1
 // @description  Adds inbox notifications for posts that you've CVd/DVd and later become active.
 // @author       Sam
 // @include      /^https?:\/\/(meta.)?stack(overflow|exchange).com/.*$/
@@ -114,6 +114,7 @@ function watchPost(url, reason)
             }
             
             addInboxItem(url, "just now", title, summary, reason);
+            ws.close();
         }
     };
     ws.onopen = function()
@@ -141,7 +142,7 @@ function addDVListeners()
     if (post === null) return;
     $(".vote-down-off").first().on("click", function() { watchPost(post[0], "dv"); });
 }
-                         
+
 function removePost(key, post)
 {
     var otherPosts = localStorage.getItem(key);
@@ -150,7 +151,7 @@ function removePost(key, post)
     
     localStorage.setItem(key, otherPosts.replace(post + ";", ""));
 }
-                         
+
 function savePost(key, post)
 {
     var otherPosts = localStorage.getItem(key);
