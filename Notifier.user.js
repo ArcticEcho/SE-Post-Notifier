@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SE Active Post Notifier
 // @namespace    https://github.com/ArcticEcho/SE-Post-Notifier
-// @version      0.2.4
+// @version      0.3.0
 // @description  Adds inbox notifications for posts that you've CVd/DVd and later become active.
 // @author       Sam
 // @include      /^https?:\/\/stack(overflow|exchange).com/
@@ -35,6 +35,7 @@ var checkExist = setInterval(function()
     {
         addDVListeners();
         fillInbox();
+        addManAddPostsLink();
         watchOldPosts();
         clearInterval(checkExist);
     }
@@ -75,7 +76,7 @@ function watchOldPosts()
     
     for (var i = 0; i < manUrls.length; i++)
         if (manUrls[i].length > 0)
-            watchPost(manUrls[i], "manual");
+            watchPost(manUrls[i], "man");
 }
 
 function watchPost(url, reason)
@@ -89,6 +90,7 @@ function watchPost(url, reason)
     _watching.push(url);
     
     var ws = new WebSocket("wss://qa.sockets.stackexchange.com");
+    var postID = url.match(/questions\/\d+/gi)[0].substring(10);
     ws.onmessage = function(e)
     {
         var a = "";
@@ -115,7 +117,7 @@ function watchPost(url, reason)
                     savePost("CVPostsPending", url);
                     summary = _cvPostInboxItemSummary;
                     break;
-                case "manual":
+                case "man":
                     savePost("ManPostsPending", url);
                     summary = _manPostInboxItemSummary;
                     break;
@@ -127,7 +129,7 @@ function watchPost(url, reason)
     };
     ws.onopen = function()
     {
-        ws.send("1-question-" + url.match(/questions\/\d+/gi)[0].substring(10));
+        ws.send("1-question-" + postID);
     };
     
     switch (reason.toLowerCase())
@@ -138,10 +140,28 @@ function watchPost(url, reason)
         case "cv":
             savePost("CVPostsQueue", url);
             break;
-        case "manual":
+        case "man":
             savePost("ManPostsQueue", url);
             break;
     }
+}
+    
+function addManAddPostsLink()
+{
+    var url = document.URL.match(/^https?:\/\/stackoverflow\.com\/questions\/\d+/gi)[0];
+    var a = document.createElement("a");
+    a.setAttribute("title", "Add this post to the manual watch list.");
+    a.appendChild(document.createTextNode("watch"));
+    a.onclick = function()
+    {
+        watchPost(url, "man");
+    };
+    
+    var span = document.createElement("span");
+    span.setAttribute("class", "lsep");
+    span.appendChild(document.createTextNode("|"));
+    
+    $(".post-menu").first().append(span).append(a);
 }
     
 function addDVListeners()
@@ -193,7 +213,7 @@ function fillInbox()
     
     processPosts(dvPosts, _dvPostInboxItemSummary, "dv");
     processPosts(cvPosts, _cvPostInboxItemSummary, "cv");
-    processPosts(manPosts, _manPostInboxItemSummary, "manual");
+    processPosts(manPosts, _manPostInboxItemSummary, "man");
 }
 
 function httpGet(url)
@@ -224,7 +244,7 @@ function addInboxItem(link, active, title, summary, reason)
                 removePost("CVPostsQueue", link);
                 removePost("CVPostsPending", link);
                 break;
-            case "manual":
+            case "man":
                 removePost("ManPostsQueue", link);
                 removePost("ManPostsPending", link);
                 break;
