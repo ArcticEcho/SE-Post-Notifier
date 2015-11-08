@@ -1,18 +1,18 @@
 // ==UserScript==
 // @name         SE Active Post Notifier
 // @namespace    https://github.com/ArcticEcho/SE-Post-Notifier
-// @version      0.2.3
+// @version      0.2.4
 // @description  Adds inbox notifications for posts that you've CVd/DVd and later become active.
 // @author       Sam
 // @include      /^https?:\/\/stack(overflow|exchange).com/
 // ==/UserScript==
 
 // localStorage usage.
-// DVPostsQueue    = downvoted posts (URLs) that have not yet been edited.
-// CVPostsQueue    = closed posts (URLs) that have not yet been edited.
-// ManPostsQueue   = manually added posts (URLs) that have not yet been edited.
+// DVPostsQueue    = downvoted posts (URLs) that have not been edited since being downvoted.
 // DVPostsPending  = down voted posts (URLs) that have been edited, but not yet viewed.
-// CVPostsPending  = closed posts (URLs) that have been edited, but not yet viewed.
+// CVPostsQueue    = close voted posts (URLs) that have not been edited since being close voted.
+// CVPostsPending  = close voted posts (URLs) that have been edited, but not yet viewed.
+// ManPostsQueue   = manually added posts (URLs) that have not yet been edited.
 // ManPostsPending = manually added posts (URLs) that have been edited, but not yet viewed.
 
 var _dvPostInboxItemSummary = "A post you've downvoted has been edited.";
@@ -176,14 +176,14 @@ function fillInbox()
     var manPosts = localStorage.getItem("ManPostsPending");  
     var processPosts = function(posts, inboxItemSummary, reason)
     {
-        if (!posts || posts.length > 0) return;
+        if (!posts || posts.length == 0) return;
         
         var urls = posts.split(";");
 
         for (var i = 0; i < urls.length; i++)
         {
             if (!urls[i] || urls[i].length === 0) continue;
-
+            
             var postHtml = httpGet(urls[i]);
             var title = $(".question-hyperlink", $(postHtml)).first().text();
             var active = $(".relativetime", $(postHtml)).first().text();
