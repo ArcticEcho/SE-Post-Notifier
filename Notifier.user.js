@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SE Active Post Notifier
 // @namespace    https://github.com/ArcticEcho/SE-Post-Notifier
-// @version      0.2.2
+// @version      0.2.3
 // @description  Adds inbox notifications for posts that you've CVd/DVd and later become active.
 // @author       Sam
 // @include      /^https?:\/\/stack(overflow|exchange).com/
@@ -45,8 +45,8 @@ var watchStorage = setInterval(function()
     var newDvPs = localStorage.getItem("DVPostsQueue");
     if (_dvPs !== newDvPs)
     {
-        var oldIDs = (_dvPs === null ? "" : _dvPs).split(";");
-        var newIDs = (newDvPs === null ? "" : newDvPs).split(";");
+        var oldIDs = (!_dvPs ? "" : _dvPs).split(";");
+        var newIDs = (!newDvPs ? "" : newDvPs).split(";");
         
         for (var i = 0; i < newIDs.length; i++)
         {
@@ -82,13 +82,13 @@ function watchPost(url, reason)
 {
     console.log("Request to watch post: " + url);
     
-    if (_watching.indexOf(url) !== -1 || url === undefined || url.length === 0) { console.log("Rejected.\n\n"); return; }
+    if (!url || url.length === 0 || _watching.indexOf(url) !== -1) { console.log("Rejected.\n\n"); return; }
     
     console.log("Accepted.\n\n");
     
     _watching.push(url);
     
-    var ws = new WebSocket("ws://qa.sockets.stackexchange.com");
+    var ws = new WebSocket("wss://qa.sockets.stackexchange.com");
     ws.onmessage = function(e)
     {
         var a = "";
@@ -147,7 +147,7 @@ function watchPost(url, reason)
 function addDVListeners()
 {
     var post = document.URL.match(/^https?:\/\/stackoverflow\.com\/questions\/\d+/gi);
-    if (post === null) return;
+    if (post == null) return;
     $(".vote-down-off").first().on("click", function() { watchPost(post[0], "dv"); });
 }
                          
@@ -155,7 +155,7 @@ function removePost(key, post)
 {
     var otherPosts = localStorage.getItem(key);
     
-    if (otherPosts === undefined) return;
+    if (!otherPosts) return;
     
     localStorage.setItem(key, otherPosts.replace(post + ";", ""));
 }
@@ -164,9 +164,9 @@ function savePost(key, post)
 {
     var otherPosts = localStorage.getItem(key);
     
-    if (otherPosts !== undefined && otherPosts.indexOf(post) !== -1) return;
+    if (otherPosts && otherPosts.indexOf(post) !== -1) return;
     
-    localStorage.setItem(key, (otherPosts === null ? "" : otherPosts) + post + ";");
+    localStorage.setItem(key, (!otherPosts ? "" : otherPosts) + post + ";");
 }
 
 function fillInbox()
@@ -176,19 +176,18 @@ function fillInbox()
     var manPosts = localStorage.getItem("ManPostsPending");  
     var processPosts = function(posts, inboxItemSummary, reason)
     {
-        if (posts !== null && posts.length > 0)
-        {
-            var urls = posts.split(";");
-            
-            for (var i = 0; i < urls.length; i++)
-            {
-                if (!urls[i] || urls[i].length === 0) continue;
+        if (!posts || posts.length > 0) return;
+        
+        var urls = posts.split(";");
 
-                var postHtml = httpGet(urls[i]);
-                var title = $(".question-hyperlink", $(postHtml)).first().text();
-                var active = $(".relativetime", $(postHtml)).first().text();
-                addInboxItem(urls[i], active, title, inboxItemSummary, reason);
-            }
+        for (var i = 0; i < urls.length; i++)
+        {
+            if (!urls[i] || urls[i].length === 0) continue;
+
+            var postHtml = httpGet(urls[i]);
+            var title = $(".question-hyperlink", $(postHtml)).first().text();
+            var active = $(".relativetime", $(postHtml)).first().text();
+            addInboxItem(urls[i], active, title, inboxItemSummary, reason);
         }
     };
     
@@ -281,5 +280,5 @@ function addInboxItem(link, active, title, summary, reason)
     var unreadCount = $(".topbar-icon.icon-inbox.yes-hover.js-inbox-button .unread-count");
     unreadCount.removeAttr("style");
     var txt = unreadCount.text();
-    unreadCount.text(parseInt(txt === null || txt.length === 0 ? "0" : txt) + 1);
+    unreadCount.text(parseInt(!txt || txt.length === 0 ? "0" : txt) + 1);
 }
