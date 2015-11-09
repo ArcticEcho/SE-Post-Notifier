@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SE Active Post Notifier
 // @namespace    https://github.com/ArcticEcho/SE-Post-Notifier
-// @version      0.3.1
+// @version      0.3.2
 // @description  Adds inbox notifications for posts that you've CVd/DVd and later become active.
 // @author       Sam
 // @include      /^https?:\/\/stack(overflow|exchange).com/
@@ -160,9 +160,20 @@ function addWatchBtn()
     if (!url) return;
     
     var a = document.createElement("a");
-    a.setAttribute("title", "Start receiving notifications for this post.");
     a.setAttribute("id", "watch-post");
-    a.appendChild(document.createTextNode("watch"));
+    
+    var pts = localStorage.getItem("ManPostsQueue");
+    if (!pts || pts.indexOf(url[0]) === -1)
+    {
+        a.setAttribute("title", "Start receiving notifications for this post.");
+        a.appendChild(document.createTextNode("watch"));
+    }
+    else
+    {
+        a.setAttribute("title", "Stop receiving notifications for this post.");
+        a.appendChild(document.createTextNode("unwatch"));
+    }
+
     a.onclick = function()
     {
         var txt = $(".post-menu #watch-post").first().text();
