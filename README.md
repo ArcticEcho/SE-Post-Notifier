@@ -4,11 +4,12 @@ Current functionality (SO only):
 
  * Adds notifications for:
    * Downvoted questions.
-   * Downvoted answers? (untested)
+   * Manually added questions.
 
 Planned:
 
   * Notifications for:
+    * Downvoted answers.
     * Close voted questions.
-    * Manually added questions/answer.
-  * Support for rest of SE.
+    * Manually added answers.
+  * Support for rest of SE (including meta sites).
