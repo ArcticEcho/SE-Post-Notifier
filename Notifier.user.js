@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SE Active Post Notifier
 // @namespace    https://github.com/ArcticEcho/SE-Post-Notifier
-// @version      0.3.0
+// @version      0.3.1
 // @description  Adds inbox notifications for posts that you've CVd/DVd and later become active.
 // @author       Sam
 // @include      /^https?:\/\/stack(overflow|exchange).com/
@@ -35,7 +35,7 @@ var checkExist = setInterval(function()
     {
         addDVListeners();
         fillInbox();
-        addManAddPostsLink();
+        addWatchBtn();
         watchOldPosts();
         clearInterval(checkExist);
     }
@@ -103,25 +103,32 @@ function watchPost(url, reason)
         
         if (a == "post-edit")
         {
-            var postHtml = httpGet(url);
-            var title = $(".question-hyperlink", $(postHtml)).first().text();
             var summary;
             
             switch (reason.toLowerCase())
             {
                 case "dv":
+                    var pts = localStorage.getItem("DVPostsQueue");
+                    if (!pts || pts.indexOf(url) === -1) return;
                     savePost("DVPostsPending", url);
                     summary = _dvPostInboxItemSummary;
                     break;
                 case "cv":
+                    var pts = localStorage.getItem("CVPostsQueue");
+                    if (!pts || pts.indexOf(url) === -1) return;
                     savePost("CVPostsPending", url);
                     summary = _cvPostInboxItemSummary;
                     break;
                 case "man":
+                    var pts = localStorage.getItem("ManPostsQueue");
+                    if (!pts || pts.indexOf(url) === -1) return;
                     savePost("ManPostsPending", url);
                     summary = _manPostInboxItemSummary;
                     break;
             }
+            
+            var postHtml = httpGet(url);
+            var title = $(".question-hyperlink", $(postHtml)).first().text();
             
             addInboxItem(url, "just now", title, summary, reason);
             ws.close();
@@ -146,15 +153,32 @@ function watchPost(url, reason)
     }
 }
     
-function addManAddPostsLink()
+function addWatchBtn()
 {
-    var url = document.URL.match(/^https?:\/\/stackoverflow\.com\/questions\/\d+/gi)[0];
+    var url = document.URL.match(/^https?:\/\/stackoverflow\.com\/questions\/\d+/gi);
+    
+    if (!url) return;
+    
     var a = document.createElement("a");
-    a.setAttribute("title", "Add this post to the manual watch list.");
+    a.setAttribute("title", "Start receiving notifications for this post.");
+    a.setAttribute("id", "watch-post");
     a.appendChild(document.createTextNode("watch"));
     a.onclick = function()
     {
-        watchPost(url, "man");
+        var txt = $(".post-menu #watch-post").first().text();
+        
+        if (txt == "watch")
+        {
+            $(".post-menu #watch-post").first().text("unwatch");
+            a.setAttribute("title", "Stop receiving notifications for this post.");
+            watchPost(url[0], "man");
+        }
+        else
+        {
+            $(".post-menu #watch-post").first().text("watch");
+            a.setAttribute("title", "Start receiving notifications for this post.");
+            removePost("ManPostsQueue", url[0]);
+        }
     };
     
     var span = document.createElement("span");
@@ -173,6 +197,9 @@ function addDVListeners()
                          
 function removePost(key, post)
 {
+    for (var i = 0; i < _watching.length; i++)
+        if (_watching[i] == post) _watching.splice(i, 1);
+    
     var otherPosts = localStorage.getItem(key);
     
     if (!otherPosts) return;
@@ -245,7 +272,7 @@ function addInboxItem(link, active, title, summary, reason)
                 removePost("CVPostsPending", link);
                 break;
             case "man":
-                removePost("ManPostsQueue", link);
+                // Don't remove manually added posts (use the "unwatch" btn for that).
                 removePost("ManPostsPending", link);
                 break;
         }
