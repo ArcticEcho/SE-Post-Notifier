@@ -12,4 +12,4 @@ Planned:
     * Downvoted answers.
     * Close voted questions.
     * Manually added answers.
-  * Support for rest of SE (including meta sites).
+  * Support for rest of SE.
